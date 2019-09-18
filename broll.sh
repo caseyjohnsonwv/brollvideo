@@ -16,7 +16,9 @@ printf "Found $TOTALCLIPS .mp4 clips in $CLIPDIR\n"
 for CLIPNAME in $(ls -1 "$CLIPDIR"); do
   BEATS=$((2*$(shuf -i 1-4 -n 1)))
   CLIPTIME=$(awk "BEGIN {print ($BEATS*60/$TEMPO)}")
-  CLIPSTART=0
+  CLIPLENGTH=$(ffprobe -i $CLIPDIR/$CLIPNAME -show_format -v quiet | sed -n 's/duration=//p' | sed 's/\..*$//')
+  CLIPSTARTMAX=$(($CLIPLENGTH-$(echo $CLIPTIME | sed 's/\..*$//')-1))
+  CLIPSTART=$(shuf -i 0-$CLIPSTARTMAX -n 1)
   ffmpeg -i "$CLIPDIR"/"$CLIPNAME" -ss $CLIPSTART -t $CLIPTIME ./."$(echo $CLIPNAME | sed -e 's/.mp4/_cut&/I')"
 done
 
