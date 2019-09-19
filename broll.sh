@@ -1,6 +1,6 @@
 #check inputs
 if [ $# -lt 3 ]; then
-  printf "Usage: broll.sh <input_directory> <output_file> <audio_tempo>\n"
+  printf "Usage: broll.sh <input_directory> <output_file> <audio_tempo> [<audio_file>]\n"
   exit
 fi
 
@@ -9,6 +9,7 @@ LISTFILE=".cliplist.txt"
 CLIPDIR=$1
 OUTPUTFILE=$2
 TEMPO=$3
+AUDIOFILE=$4
 TOTALCLIPS=$(ls -1 "$CLIPDIR" | grep -i ".mp4" | wc -l)
 printf "Found $TOTALCLIPS .mp4 clips in directory $CLIPDIR\n"
 
@@ -30,6 +31,12 @@ done
 #generate input file for concatenation and concatenate clips
 ls -1a | grep "_cut" | sed "s/^/file /" | shuf > "$LISTFILE"
 ffmpeg -f concat -safe 0 -i "$LISTFILE" -c copy "$OUTPUTFILE" -y
+
+if [ -f "$AUDIOFILE" ]; then
+  ffmpeg -i "$OUTPUTFILE" -i "$AUDIOFILE" -c:v copy -map 0:v:0 -map 1:a:0 -shortest "$(echo $OUTPUTFILE | sed 's/^/_/')" -y
+  rm "$OUTPUTFILE"
+  mv _"$OUTPUTFILE" "$OUTPUTFILE"
+fi
 
 #cleanup temporary files
 rm ./.*_cut.mp4 2>/dev/null
