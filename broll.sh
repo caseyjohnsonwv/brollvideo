@@ -10,7 +10,12 @@ CLIPDIR=$1
 OUTPUTFILE=$2
 TEMPO=$3
 TOTALCLIPS=$(ls -1 "$CLIPDIR" | grep -i ".mp4" | wc -l)
-printf "Found $TOTALCLIPS .mp4 clips in $CLIPDIR\n"
+printf "Found $TOTALCLIPS .mp4 clips in directory $CLIPDIR\n"
+
+#if no clips, do not edit
+if [ $TOTALCLIPS -lt 1 ]; then
+	exit
+fi
 
 #cut video clips to length
 for CLIPNAME in $(ls -1 "$CLIPDIR"); do
@@ -30,6 +35,3 @@ ffmpeg -f concat -safe 0 -i "$LISTFILE" -c copy "$OUTPUTFILE" -y
 rm ./.*_cut.mp4 2>/dev/null
 rm ./.*_cut.MP4 2>/dev/null
 rm "$LISTFILE" 2>/dev/null
-
-printf "Done.\n"
-sleep 2
