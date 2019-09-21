@@ -37,4 +37,9 @@ done
 FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$TOTALCLIPS:v=1:a=1[outv][outa] -map [outv] -map [outa]"
 
 #does not include mp3 yet
-ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH "$OUTPUTFILE" -y
+ffmpeg -safe 0 $CLIPLIST -filter_complex $FILTERGRAPH ."$OUTPUTFILE" -y
+
+if [ -f $AUDIOFILE ]; then
+  ffmpeg -safe 0 -i ."$OUTPUTFILE" -i "$AUDIOFILE" -shortest "$OUTPUTFILE" -y
+  rm ."$OUTPUTFILE" 2>/dev/null
+fi
