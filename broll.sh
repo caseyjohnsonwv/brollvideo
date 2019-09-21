@@ -5,7 +5,6 @@ if [ $# -lt 3 ]; then
 fi
 
 #parse inputs and set constants
-LISTFILE=".cliplist.txt"
 CLIPDIR=$1
 OUTPUTFILE=$2
 TEMPO=$3
@@ -18,27 +17,29 @@ if [ $TOTALCLIPS -lt 1 ]; then
 	exit
 fi
 
-#cut video clips to length
-for CLIPNAME in $(ls -1 "$CLIPDIR"); do
+#build input and filtergraph for ffmpeg command
+printf "Selecting start/end times for each clip...\n"
+CLIPNUM=0
+FILTERGRAPH_CUT=""
+FILTERGRAPH_CONCAT=""
+CLIPLIST=""
+for CLIPNAME in $(ls -1 "$CLIPDIR" | shuf); do
   BEATS=$((2*$(shuf -i 1-4 -n 1)))
   CLIPTIME=$(awk "BEGIN {print ($BEATS*60/$TEMPO)}")
   CLIPLENGTH=$(ffprobe -i $CLIPDIR/$CLIPNAME -show_format -v quiet | sed -n 's/duration=//p' | sed 's/\..*$//')
   CLIPSTARTMAX=$(($CLIPLENGTH-$(echo $CLIPTIME | sed 's/\..*$//')-1))
   CLIPSTART=$(shuf -i 0-$CLIPSTARTMAX -n 1)
-  ffmpeg -i "$CLIPDIR"/"$CLIPNAME" -ss $CLIPSTART -t $CLIPTIME ./."$(echo $CLIPNAME | sed -e 's/.mp4/_cut&/I')"
+  CLIPLIST="$CLIPLIST -i $CLIPDIR/$CLIPNAME"
+  FILTERGRAPH_CUT="$FILTERGRAPH_CUT[$CLIPNUM:v]trim=start=$CLIPSTART:duration=$CLIPTIME,setpts=PTS-STARTPTS[v$CLIPNUM];[$CLIPNUM:a]atrim=start=$CLIPSTART:duration=$CLIPTIME,asetpts=PTS-STARTPTS[a$CLIPNUM];"
+  FILTERGRAPH_CONCAT="$FILTERGRAPH_CONCAT[v$CLIPNUM][a$CLIPNUM]"
+  CLIPNUM=$(($CLIPNUM+1))
 done
+FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$TOTALCLIPS:v=1:a=1[outv][outa] -map [outv] -map [outa]"
 
-#generate input file for concatenation and concatenate clips
-ls -1a | grep "_cut" | sed "s/^/file /" | shuf > "$LISTFILE"
-ffmpeg -f concat -safe 0 -i "$LISTFILE" -c copy "$OUTPUTFILE" -y
-
-if [ -f "$AUDIOFILE" ]; then
-  ffmpeg -i "$OUTPUTFILE" -i "$AUDIOFILE" -c:v copy -map 0:v:0 -map 1:a:0 -shortest "$(echo $OUTPUTFILE | sed 's/^/_/')" -y
-  rm "$OUTPUTFILE"
-  mv _"$OUTPUTFILE" "$OUTPUTFILE"
+if [ -f $AUDIOFILE ]; then
+  ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH ."$OUTPUTFILE" -y
+  ffmpeg -i ."$OUTPUTFILE" -i "$AUDIOFILE" -safe 0 -c copy -map 0:v:0 -map 1:a:0 -shortest "$OUTPUTFILE" -y
+  rm ."$OUTPUTFILE" 2>/dev/null
+else
+  ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH "$OUTPUTFILE" -y
 fi
-
-#cleanup temporary files
-rm ./.*_cut.mp4 2>/dev/null
-rm ./.*_cut.MP4 2>/dev/null
-rm "$LISTFILE" 2>/dev/null
