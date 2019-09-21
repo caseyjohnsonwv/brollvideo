@@ -23,7 +23,7 @@ CLIPNUM=0
 FILTERGRAPH_CUT=""
 FILTERGRAPH_CONCAT=""
 CLIPLIST=""
-for CLIPNAME in $(ls -1 "$CLIPDIR"); do
+for CLIPNAME in $(ls -1 "$CLIPDIR" | shuf); do
   BEATS=$((2*$(shuf -i 1-4 -n 1)))
   CLIPTIME=$(awk "BEGIN {print ($BEATS*60/$TEMPO)}")
   CLIPLENGTH=$(ffprobe -i $CLIPDIR/$CLIPNAME -show_format -v quiet | sed -n 's/duration=//p' | sed 's/\..*$//')
@@ -37,9 +37,9 @@ done
 FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$TOTALCLIPS:v=1:a=1[outv][outa] -map [outv] -map [outa]"
 
 #does not include mp3 yet
-ffmpeg -safe 0 $CLIPLIST -filter_complex $FILTERGRAPH ."$OUTPUTFILE" -y
+ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH ."$OUTPUTFILE" -y
 
 if [ -f $AUDIOFILE ]; then
-  ffmpeg -safe 0 -i ."$OUTPUTFILE" -i "$AUDIOFILE" -shortest "$OUTPUTFILE" -y
+  ffmpeg -i ."$OUTPUTFILE" -i "$AUDIOFILE" -safe 0 -c copy -map 0:v:0 -map 1:a:0 -shortest "$OUTPUTFILE" -y
   rm ."$OUTPUTFILE" 2>/dev/null
 fi
