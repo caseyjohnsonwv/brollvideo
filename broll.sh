@@ -36,10 +36,10 @@ for CLIPNAME in $(ls -1 "$CLIPDIR" | shuf); do
 done
 FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$TOTALCLIPS:v=1:a=1[outv][outa] -map [outv] -map [outa]"
 
-#does not include mp3 yet
-ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH ."$OUTPUTFILE" -y
-
 if [ -f $AUDIOFILE ]; then
+  ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH ."$OUTPUTFILE" -y
   ffmpeg -i ."$OUTPUTFILE" -i "$AUDIOFILE" -safe 0 -c copy -map 0:v:0 -map 1:a:0 -shortest "$OUTPUTFILE" -y
   rm ."$OUTPUTFILE" 2>/dev/null
+else
+  ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH "$OUTPUTFILE" -y
 fi
