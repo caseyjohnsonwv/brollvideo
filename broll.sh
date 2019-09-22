@@ -24,7 +24,7 @@ FILTERGRAPH_CUT=""
 FILTERGRAPH_CONCAT=""
 CLIPLIST=""
 DIMENSIONS="1920x1080"
-BLACKSCREENFILE="videoblackscreens.mp4"
+BLACKSCREENFILE=".videoblackscreens.mp4"
 for CLIPNAME in $(ls -1 "$CLIPDIR" | shuf); do
   BEATS=$((2*$(shuf -i 1-4 -n 1)))
   CLIPTIME=$(awk "BEGIN {print ($BEATS*60/$TEMPO)}")
@@ -48,10 +48,15 @@ FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$(($TOTALCLIPS+2)):
 #do the thing
 if [ -f $AUDIOFILE ]; then
   ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH ."$OUTPUTFILE" -y -hide_banner
-  ffmpeg -i ."$OUTPUTFILE" -i "$AUDIOFILE" -safe 0 -c copy -map 0:v:0 -map 1:a:0 -shortest "$OUTPUTFILE" -y -hide_banner
+  VIDEOLENGTH=$(ffprobe -i ."$OUTPUTFILE" -show_entries stream=codec_type,duration -of compact=p=0:nk=1 | grep "audio|" | sed "s/audio|//")
+  STARTFADEOUT=$(awk "BEGIN {print ($VIDEOLENGTH - $FOURBEATS)}")
+  ffmpeg -i ."$OUTPUTFILE" -i "$AUDIOFILE" -safe 0 -af "afade=in:st=0:d=$FOURBEATS,afade=out:st=$STARTFADEOUT:d=$FOURBEATS" -c:v copy -map 0:v:0 -map 1:a:0 -shortest "$OUTPUTFILE" -y -hide_banner
   rm ."$OUTPUTFILE" 2>/dev/null
 else
   ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH "$OUTPUTFILE" -y
 fi
 
+sleep 1
 rm $BLACKSCREENFILE
+
+sleep 30
