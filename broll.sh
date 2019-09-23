@@ -58,5 +58,3 @@ fi
 
 sleep 1
 rm $BLACKSCREENFILE
-
-sleep 30
