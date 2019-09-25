@@ -30,6 +30,11 @@ for CLIPNAME in $(ls -1 "$CLIPDIR" | shuf); do
   CLIPTIME=$(awk "BEGIN {print ($BEATS*60/$TEMPO)}")
   CLIPLENGTH=$(ffprobe -i $CLIPDIR/$CLIPNAME -show_format -v quiet | sed -n 's/duration=//p' | sed 's/\..*$//')
   CLIPSTARTMAX=$(($CLIPLENGTH-$(echo $CLIPTIME | sed 's/\..*$//')-1))
+  if [ $CLIPSTARTMAX -lt 1 ]; then
+    TOTALCLIPS=$(($TOTALCLIPS-1))
+    printf "Could not use '$CLIPNAME' --> too short! $TOTALCLIPS clips remaining...\n"
+    continue
+  fi
   CLIPSTART=$(shuf -i 0-$CLIPSTARTMAX -n 1)
   CLIPLIST="$CLIPLIST -i $CLIPDIR/$CLIPNAME"
   FILTERGRAPH_CUT="$FILTERGRAPH_CUT[$CLIPNUM:v]trim=start=$CLIPSTART:duration=$CLIPTIME,setpts=PTS-STARTPTS[v$CLIPNUM];[$CLIPNUM:a]atrim=start=$CLIPSTART:duration=$CLIPTIME,asetpts=PTS-STARTPTS[a$CLIPNUM];"
