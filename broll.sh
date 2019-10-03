@@ -51,7 +51,9 @@ ffmpeg -f lavfi -i color=c=black:s=$DIMENSIONS:d=$FOURBEATS -f lavfi -i aevalsrc
 CLIPLIST="-i $BLACKSCREENFILE $CLIPLIST -i $BLACKSCREENFILE"
 FILTERGRAPH_CUT="[0:v]null[v0];[0:a]anull[a0];$FILTERGRAPH_CUT[$(($MAXCLIPS+1)):v]null[v$(($MAXCLIPS+1))];[$(($MAXCLIPS+1)):a]anull[a$((MAXCLIPS+1))];"
 FILTERGRAPH_CONCAT="[v0][a0]$FILTERGRAPH_CONCAT[v$(($MAXCLIPS+1))][a$(($MAXCLIPS+1))]"
-FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$(($MAXCLIPS+2)):v=1:a=1[outv][outa] -map [outv] -map [outa]"
+#build final filtergraph
+CRF=31
+FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$(($MAXCLIPS+2)):v=1:a=1[outv][outa] -map [outv] -map [outa] -crf $CRF"
 
 #do the thing
 if [ -f $AUDIOFILE ]; then
@@ -67,5 +69,3 @@ fi
 
 sleep 1
 rm $BLACKSCREENFILE
-
-sleep 30
