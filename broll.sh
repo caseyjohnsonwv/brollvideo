@@ -1,20 +1,23 @@
 #check inputs
 if [ $# -lt 3 ]; then
-  printf "Usage: broll.sh <input_directory> <output_file> <tempo> [<audio_file>]\n"
+  printf "Usage: broll.sh <input_directory> <output_file> <max_clips> <tempo> <audio_file>\n"
   exit
 fi
 
 #parse inputs and set constants
 CLIPDIR=$1
 OUTPUTFILE=$2
-TEMPO=$3
-AUDIOFILE=$4
+MAXCLIPS=$3
+TEMPO=$4
+AUDIOFILE=$5
 TOTALCLIPS=$(ls -1 "$CLIPDIR" | grep -i ".mp4" | wc -l)
 printf "Found $TOTALCLIPS .mp4 clips in directory $CLIPDIR\n"
 
 #if no clips, do not edit
 if [ $TOTALCLIPS -lt 1 ]; then
 	exit
+elif [ $MAXCLIPS -gt $TOTALCLIPS ]; then
+  MAXCLIPS=$TOTALCLIPS
 fi
 
 #build input and filtergraph for ffmpeg command
@@ -25,14 +28,14 @@ FILTERGRAPH_CONCAT=""
 CLIPLIST=""
 DIMENSIONS="1920x1080"
 BLACKSCREENFILE=".videoblackscreens.mp4"
-for CLIPNAME in $(ls -1 "$CLIPDIR" | shuf); do
+for CLIPNAME in $(ls -1 "$CLIPDIR" | shuf -n $MAXCLIPS); do
   BEATS=$((2*$(shuf -i 1-4 -n 1)))
   CLIPTIME=$(awk "BEGIN {print ($BEATS*60/$TEMPO)}")
   CLIPLENGTH=$(ffprobe -i $CLIPDIR/$CLIPNAME -show_format -v quiet | sed -n 's/duration=//p' | sed 's/\..*$//')
   CLIPSTARTMAX=$(($CLIPLENGTH-$(echo $CLIPTIME | sed 's/\..*$//')-1))
   if [ $CLIPSTARTMAX -lt 1 ]; then
-    TOTALCLIPS=$(($TOTALCLIPS-1))
-    printf "Could not use '$CLIPNAME' --> too short! $TOTALCLIPS clips remaining...\n"
+    MAXCLIPS=$(($MAXCLIPS-1))
+    printf "Could not use '$CLIPNAME' --> too short! $MAXCLIPS clips remaining...\n"
     continue
   fi
   CLIPSTART=$(shuf -i 0-$CLIPSTARTMAX -n 1)
@@ -46,9 +49,9 @@ done
 FOURBEATS=$(awk "BEGIN {print (240/$TEMPO)}")
 ffmpeg -f lavfi -i color=c=black:s=$DIMENSIONS:d=$FOURBEATS -f lavfi -i aevalsrc=0:d=$FOURBEATS $BLACKSCREENFILE -y -hide_banner
 CLIPLIST="-i $BLACKSCREENFILE $CLIPLIST -i $BLACKSCREENFILE"
-FILTERGRAPH_CUT="[0:v]null[v0];[0:a]anull[a0];$FILTERGRAPH_CUT[$(($TOTALCLIPS+1)):v]null[v$(($TOTALCLIPS+1))];[$(($TOTALCLIPS+1)):a]anull[a$((TOTALCLIPS+1))];"
-FILTERGRAPH_CONCAT="[v0][a0]$FILTERGRAPH_CONCAT[v$(($TOTALCLIPS+1))][a$(($TOTALCLIPS+1))]"
-FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$(($TOTALCLIPS+2)):v=1:a=1[outv][outa] -map [outv] -map [outa]"
+FILTERGRAPH_CUT="[0:v]null[v0];[0:a]anull[a0];$FILTERGRAPH_CUT[$(($MAXCLIPS+1)):v]null[v$(($MAXCLIPS+1))];[$(($MAXCLIPS+1)):a]anull[a$((MAXCLIPS+1))];"
+FILTERGRAPH_CONCAT="[v0][a0]$FILTERGRAPH_CONCAT[v$(($MAXCLIPS+1))][a$(($MAXCLIPS+1))]"
+FILTERGRAPH="$FILTERGRAPH_CUT""$FILTERGRAPH_CONCAT""concat=n=$(($MAXCLIPS+2)):v=1:a=1[outv][outa] -map [outv] -map [outa]"
 
 #do the thing
 if [ -f $AUDIOFILE ]; then
@@ -64,3 +67,5 @@ fi
 
 sleep 1
 rm $BLACKSCREENFILE
+
+sleep 30
