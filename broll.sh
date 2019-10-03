@@ -58,7 +58,8 @@ if [ -f $AUDIOFILE ]; then
   ffmpeg -i ."$OUTPUTFILE" -i "$AUDIOFILE" -safe 0 -af "afade=in:st=0:d=$FOURBEATS,afade=out:st=$STARTFADEOUT:d=$FOURBEATS" -c:v copy -map 0:v:0 -map 1:a:0 -shortest "$OUTPUTFILE" -y -hide_banner
   rm ."$OUTPUTFILE" 2>/dev/null
 else
-  ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH "$OUTPUTFILE" -y
+  #this has a bug I haven't solved yet - just pass an audio file lol
+  ffmpeg $CLIPLIST -filter_complex $FILTERGRAPH "$OUTPUTFILE" -y -hide_banner
 fi
 
 sleep 1
